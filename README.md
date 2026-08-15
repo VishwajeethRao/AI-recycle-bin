@@ -31,10 +31,10 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 | ![Acrylic and Chute](assets/acrylic_and_foam_chute.jpg) | ![Electronics Assembly](assets/electronics_assembly.jpg) |
 | **PVC Foam Chute & Acrylic Top Lid** | **Raspberry Pi 4/5 Model B** |
 
-| Servo Circuit | Plastic Sorting Action |
-| :---: | :---: |
-| ![Servo Circuit](assets/https://core-electronics.com.au/media/wysiwyg/tutorials/Tim/Speed/Speed12/Both_Set_Ups.png) | ![Sorting Plastic](assets/sorting_plastic.png) |
-| **Servo Motor Wiring and Control Circuit** | **Carousel Rotated to Plastic Compartment** |
+| Plastic Sorting Action |
+| :---: |
+| ![Sorting Plastic](assets/sorting_plastic.png) |
+| **Carousel Rotated to Plastic Compartment** |
 
 ## ⚙️ How It Works
 
