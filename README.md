@@ -5,7 +5,6 @@
 [![Training: Google Colab](https://img.shields.io/badge/Training-Google%20Colab-orange?style=for-the-badge&logo=google-colab)](https://colab.research.google.com/)
 [![Language: Python](https://img.shields.io/badge/Language-Python%203-blue?style=for-the-badge&logo=python)](https://python.org)
 [![IDE: Thonny](https://img.shields.io/badge/IDE-Thonny-brightgreen?style=for-the-badge)](https://thonny.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Model B**. It captures video from a **5MP Pi Camera (Picamera2)**, classifies waste items (**Metal, Paper, Plastic**) using a **TensorFlow / TensorFlow Lite** model trained and tested on **Google Colab**, and mechanically sorts the waste into segregated bins using dual high-torque **MG996R servo motors**.
 
