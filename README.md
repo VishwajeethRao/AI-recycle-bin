@@ -33,7 +33,7 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 
 | Servo Circuit | Plastic Sorting Action |
 | :---: | :---: |
-| ![Servo Circuit](assets/servo_circuit.png) | ![Sorting Plastic](assets/sorting_plastic.png) |
+| ![Servo Circuit](assets/https://core-electronics.com.au/media/wysiwyg/tutorials/Tim/Speed/Speed12/Both_Set_Ups.png) | ![Sorting Plastic](assets/sorting_plastic.png) |
 | **Servo Motor Wiring and Control Circuit** | **Carousel Rotated to Plastic Compartment** |
 
 ## ⚙️ How It Works
