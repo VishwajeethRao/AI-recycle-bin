@@ -29,7 +29,7 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 | Inverted Prism Guide Chute | Electronics |
 | :---: | :---: |
 | ![Acrylic and Chute](assets/acrylic_and_foam_chute.jpg) | ![Electronics Assembly](assets/electronics_assembly.jpg) |
-| **PVC Foam Chute & Acrylic Top Lid** | **Raspberry Pi 4 ** |
+| **PVC Foam Chute & Acrylic Top Lid** | Raspberry Pi 4/5 model B|
 
 | Plastic Sorting Action |
 | :---: | :---: |
