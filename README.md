@@ -1,12 +1,13 @@
 # ♻️ AI-Powered Smart Video Classifying Recycle Bin
 
 [![Platform: Raspberry Pi](https://img.shields.io/badge/Hardware-Raspberry%20Pi%204%20%2F%205-red?style=for-the-badge&logo=raspberry-pi)](https://www.raspberrypi.com/)
-[![Engine: TensorFlow / MediaPipe](https://img.shields.io/badge/AI%20Engine-TensorFlow%20%2F%20MediaPipe-FF6F00?style=for-the-badge&logo=tensorflow)](https://developers.google.com/mediapipe)
+[![Engine: TensorFlow / TFLite](https://img.shields.io/badge/AI%20Engine-TensorFlow%20%2F%20TFLite-FF6F00?style=for-the-badge&logo=tensorflow)](https://www.tensorflow.org/lite)
+[![Training: Google Colab](https://img.shields.io/badge/Training-Google%20Colab-orange?style=for-the-badge&logo=google-colab)](https://colab.research.google.com/)
 [![Language: Python](https://img.shields.io/badge/Language-Python%203-blue?style=for-the-badge&logo=python)](https://python.org)
 [![IDE: Thonny](https://img.shields.io/badge/IDE-Thonny-brightgreen?style=for-the-badge)](https://thonny.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Model B**. It captures real-time video of discarded waste items via a **5MP Pi Camera**, detects and classifies the material type (**Metal, Paper, Plastic**) using an **Edge AI Object Detection Model** (trained with Google Colab & TensorFlow Lite), and mechanically sorts the waste into segregated bins using dual high-torque **MG996R servo motors**.
+An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Model B**. It captures real-time video of discarded waste items via a **5MP Pi Camera**, detects and classifies the material type (**Metal, Paper, Plastic**) using a **TensorFlow / TensorFlow Lite** model trained and tested on **Google Colab**, and mechanically sorts the waste into segregated bins using dual high-torque **MG996R servo motors**.
 
 ---
 
@@ -14,7 +15,7 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 
 ![AI Recycle Bin Demo](assets/demo_preview.gif)
 
-> 🎥 **Full Video Demo**: Watch the full prototype video in [assets/demo.mp4](assets/demo.mp4).
+> 🎥 **Full Video Demo**: Watch the complete hardware prototype in action in [assets/demo.mp4](assets/demo.mp4).
 
 ---
 
@@ -42,7 +43,7 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 ```mermaid
 flowchart TD
     A[Waste Item Placed on Top Flap] --> B[5MP Pi Camera Captures Video Feed]
-    B --> C[Edge AI Model Runs Inference on Raspberry Pi]
+    B --> C[TensorFlow Lite Model Runs Inference on Raspberry Pi]
     C -->|Classify Category| D{Waste Class?}
     
     D -->|Metal| E1[Servo 1 Rotates Base to 0°]
@@ -59,8 +60,8 @@ flowchart TD
     I --> J[System Ready for Next Item]
 ```
 
-1. **Vision Sensing**: When an item is placed on the chute, the **Pi Camera** sends video frames to the Raspberry Pi.
-2. **AI Classification**: The **TensorFlow / MediaPipe** model running locally on the Raspberry Pi identifies the object (`metal`, `paper`, or `plastic`).
+1. **Vision Sensing**: When an item is placed on the chute, the **Pi Camera** captures video frames.
+2. **AI Classification**: The **TensorFlow Lite** model running locally on the Raspberry Pi identifies the object (`metal`, `paper`, or `plastic`).
 3. **Carousel Positioning (Servo 1 - GPIO 18)**:
    - `Metal` $\rightarrow$ **0°**
    - `Paper` $\rightarrow$ **70°**
@@ -91,18 +92,19 @@ flowchart TD
 
 ---
 
-## 🧠 Model Training on Google Colab
+## 🧠 TensorFlow Model Training & Testing on Google Colab
 
-The AI model was trained using **Google Colab**, **TensorFlow**, and **MediaPipe Model Maker** using the [Garbage Classification / TrashNet Dataset](https://github.com/garythung/trashnet).
+The AI model was created, trained, and tested using **TensorFlow** on **Google Colab**. 
 
-To view or retrain the model, open the Jupyter Notebook:
+The Jupyter Notebook is available in the repository:
 👉 [`notebooks/Waste_Classification_Training_Colab.ipynb`](notebooks/Waste_Classification_Training_Colab.ipynb)
 
-### Training Workflow:
-1. Load dataset partitioned into **Metal**, **Paper**, and **Plastic**.
-2. Apply data augmentations (rotation, flip, brightness variation).
-3. Train using transfer learning on **MobileNetV2 / EfficientDet-Lite**.
-4. Quantize and export the model as `best.tflite` for edge deployment on Raspberry Pi.
+### Colab Pipeline Steps:
+1. **Dataset Split**: Downloaded the dataset and generated **Train** (80%) and **Test** (20%) datasets for `metal`, `paper`, and `plastic`.
+2. **Data Augmentation**: Applied rotation, zoom, shear, and flip using TensorFlow `ImageDataGenerator`.
+3. **Model Training**: Trained a deep learning classifier utilizing **MobileNetV2 Transfer Learning** with categorical cross-entropy loss and Adam optimizer.
+4. **Model Testing & Evaluation**: Evaluated accuracy/loss curves, classification report, and confusion matrix on the unseen test dataset.
+5. **TFLite Export**: Converted the trained model into a quantized **TensorFlow Lite (`best.tflite`)** file for edge deployment on Raspberry Pi.
 
 ---
 
@@ -134,25 +136,6 @@ You can also test the script on your laptop using a test video or webcam:
 ```bash
 python main.py --video assets/demo.mp4
 ```
-
----
-
-## 💰 Bill of Materials (BOM) & Cost Breakdown
-
-| Component | Specification | Quantity | Cost (INR) |
-| :--- | :--- | :---: | :--- |
-| **Raspberry Pi 4 Model B** | 4GB RAM Single Board Computer | 1 | ₹3,400 |
-| **Pi Camera Module** | 5MP OV5647 CSI Camera | 1 | ₹300 |
-| **SD Card** | 32GB Class 10 MicroSD | 1 | ₹400 |
-| **Raspberry Pi Power Adapter** | Official 15W USB-C (5.1V / 3A) | 1 | ₹725 |
-| **External DC Power Supply** | 5V / 6V / 9V (Regulated for Servos) | 1 | ₹1,000 |
-| **Servo Motors (MG 996R)** | High-Torque Metal Gear Digital Servos | 2 | ₹900 |
-| **PVC Pipes & Joints** | Rigid Outer Structure Framework | - | ₹650 |
-| **Acrylic & PVC Foam Sheets** | Chute, Top Cover, and Rotating Disc | - | ₹990 |
-| **Castor Wheels, Cables & Misc** | Magnets, Jumper Wires, Paint, Fasteners | - | ₹3,635 |
-| **Total Estimated Cost** | | | **~₹12,000 INR** |
-
-For the complete itemized breakdown, see [`docs/bill_of_materials.md`](docs/bill_of_materials.md).
 
 ---
 
