@@ -33,8 +33,8 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 
 | Plastic Sorting Action | 3D CAD Structure Design |
 | :---: | :---: |
-| ![Sorting Plastic](assets/sorting_plastic.png) | ![CAD Design](assets/cad_structure_design.jpg) |
-| **Carousel Rotated to Plastic Compartment** | **3D Structure Render** |
+| ![Sorting Plastic](assets/sorting_plastic.png) | 
+| **Carousel Rotated to Plastic Compartment** | 
 
 ---
 
