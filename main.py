@@ -5,61 +5,65 @@ Raspberry Pi 4 / 5 Edge AI Waste Sorting System
 
 Hardware Setup:
 - Raspberry Pi 4 / 5 Model B
-- 5MP Pi Camera (OV5647 CSI) or USB Webcam
+- 5MP Pi Camera (OV5647 CSI via Picamera2)
 - Servo 1 (Base Carousel): GPIO 18 (Pin 12) -> Rotates compartment (0° Metal, 70° Paper, 180° Plastic)
 - Servo 2 (Drop Flap):     GPIO 19 (Pin 35) -> Opens/closes trapdoor (0° Closed, 180° Open)
 - External 5V/6V DC Power Supply (Common Ground with Raspberry Pi)
 
-This script can be executed directly in Thonny IDE or via Terminal:
+Machine Learning:
+- TensorFlow / TensorFlow Lite model (best.tflite) trained in Google Colab
+
+Run in Thonny IDE or via Terminal:
     python main.py
 """
 
 import argparse
+import os
 import sys
 import time
 
-# OpenCV for video capture and frame visualization
-import cv2
 import numpy as np
+from PIL import Image
 
-# MediaPipe for on-device lightweight object detection
+# ---------------------------------------------------------------------------
+# TensorFlow Lite Interpreter (Pure TensorFlow, No OpenCV)
+# ---------------------------------------------------------------------------
 try:
-    import mediapipe as mp
-    from mediapipe.tasks import python
-    from mediapipe.tasks.python import vision
-    MEDIAPIPE_AVAILABLE = True
+    # Try importing standalone tflite_runtime (recommended for Raspberry Pi)
+    from tflite_runtime.interpreter import Interpreter
+    TFLITE_AVAILABLE = True
 except ImportError:
-    MEDIAPIPE_AVAILABLE = False
-    print("[WARNING] mediapipe not installed. Running in mock detection mode.")
+    try:
+        # Fallback to full TensorFlow if installed
+        import tensorflow as tf
+        Interpreter = tf.lite.Interpreter
+        TFLITE_AVAILABLE = True
+    except ImportError:
+        Interpreter = None
+        TFLITE_AVAILABLE = False
+        print("[WARNING] TensorFlow / tflite_runtime not installed. Running in mock simulation mode.")
 
-# Raspberry Pi GPIO for servo control
+# ---------------------------------------------------------------------------
+# Raspberry Pi GPIO for Servo Control
+# ---------------------------------------------------------------------------
 try:
     import RPi.GPIO as GPIO
     GPIO_AVAILABLE = True
 except (ImportError, RuntimeError):
     GPIO_AVAILABLE = False
-    print("[INFO] RPi.GPIO not available. Running in virtual/simulation mode.")
-
-# Import visualizer helper
-from utils import visualize
+    print("[INFO] RPi.GPIO not available. Running in virtual simulation mode.")
 
 # ---------------------------------------------------------------------------
 # Hardware Pin & Servo Configuration
 # ---------------------------------------------------------------------------
 PIN_SERVO_CAROUSEL = 18  # Servo 1: Carousel rotation
-PIN_SERVO_FLAP = 19      # Servo 2: Trapdoor flap actuation
+PIN_SERVO_FLAP = 19      # Servo 2: Trapdoor drop flap actuation
 PWM_FREQ = 50            # Standard 50Hz for MG996R servos
 
 # Global PWM instances
 pwm_carousel = None
 pwm_flap = None
-
-# Global state tracking
 current_category_state = 0  # 0: Home/Metal, 1: Metal, 2: Paper, 3: Plastic
-COUNTER = 0
-FPS = 0
-START_TIME = time.time()
-detection_result_list = []
 
 
 def setup_gpio():
@@ -99,7 +103,7 @@ def setAngle1(angle: int):
         pwm_carousel.ChangeDutyCycle(duty)
         time.sleep(1.0)
         GPIO.output(PIN_SERVO_CAROUSEL, False)
-        pwm_carousel.ChangeDutyCycle(0)  # Stop PWM signal to stop jitter
+        pwm_carousel.ChangeDutyCycle(0)  # Cut PWM signal to stop jitter
     else:
         time.sleep(0.5)
 
@@ -132,7 +136,9 @@ def sort_item(category_name: str):
     cat = category_name.lower().strip()
 
     if cat == "metal" and current_category_state != 1:
-        print(f"\n[SORT ACTION] Classified as METAL -> Routing to Bin 1 (0°)")
+        print(f"\n==========================================")
+        print(f" [SORT ACTION] Classified as METAL -> Bin 1 (0°)")
+        print(f"==========================================")
         setAngle1(0)
         current_category_state = 1
         time.sleep(2)
@@ -146,7 +152,9 @@ def sort_item(category_name: str):
         time.sleep(1)
 
     elif cat == "paper" and current_category_state != 2:
-        print(f"\n[SORT ACTION] Classified as PAPER -> Routing to Bin 2 (70°)")
+        print(f"\n==========================================")
+        print(f" [SORT ACTION] Classified as PAPER -> Bin 2 (70°)")
+        print(f"==========================================")
         setAngle1(70)
         current_category_state = 2
         time.sleep(2)
@@ -164,7 +172,9 @@ def sort_item(category_name: str):
         current_category_state = 0
 
     elif cat == "plastic" and current_category_state != 3:
-        print(f"\n[SORT ACTION] Classified as PLASTIC -> Routing to Bin 3 (180°)")
+        print(f"\n==========================================")
+        print(f" [SORT ACTION] Classified as PLASTIC -> Bin 3 (180°)")
+        print(f"==========================================")
         setAngle1(180)
         current_category_state = 3
         time.sleep(2)
@@ -182,177 +192,133 @@ def sort_item(category_name: str):
         current_category_state = 0
 
 
-def run(model: str, max_results: int, score_threshold: float,
-        camera_id: int, width: int, height: int, video_file: str = None) -> None:
+def load_labels(labels_file: str):
+    """Load class labels from file."""
+    if os.path.exists(labels_file):
+        with open(labels_file, "r") as f:
+            return [line.strip() for line in f.readlines() if line.strip()]
+    return ["metal", "paper", "plastic"]
+
+
+def run(model_path: str, labels_path: str, threshold: float = 0.5):
     """
-    Main loop: continuously capture camera frames, run AI inference,
+    Main loop: Capture frames from PiCamera2, classify using TensorFlow Lite,
     and trigger dual-servo sorting mechanisms.
     """
-    global FPS, COUNTER, START_TIME, detection_result_list
-
     setup_gpio()
 
-    # Initialize Camera
-    cap = None
-    picam2 = None
+    labels = load_labels(labels_path)
+    print(f"[INFO] Loaded categories: {labels}")
 
-    # Check if video file or webcam
-    if video_file:
-        print(f"[INFO] Playing video source: {video_file}")
-        cap = cv2.VideoCapture(video_file)
-    else:
+    # Initialize TensorFlow Lite Model
+    interpreter = None
+    input_details = None
+    output_details = None
+
+    if TFLITE_AVAILABLE and os.path.exists(model_path):
         try:
-            from picamera2 import Picamera2
-            picam2 = Picamera2()
-            picam2.preview_configuration.main.size = (width, height)
-            picam2.preview_configuration.main.format = "RGB888"
-            picam2.preview_configuration.align()
-            picam2.configure("preview")
-            picam2.start()
-            print("[INFO] PiCamera2 initialized successfully.")
-        except Exception:
-            print(f"[INFO] Using OpenCV VideoCapture (Camera ID {camera_id}).")
-            cap = cv2.VideoCapture(camera_id)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-
-    # Initialize MediaPipe Detector if available
-    detector = None
-    if MEDIAPIPE_AVAILABLE:
-        try:
-            base_options = python.BaseOptions(model_asset_path=model)
-            def save_result(result: vision.ObjectDetectorResult, unused_output_image: mp.Image, timestamp_ms: int):
-                global FPS, COUNTER, START_TIME, detection_result_list
-                # Calculate FPS
-                if COUNTER % 10 == 0:
-                    FPS = 10.0 / max(0.001, (time.time() - START_TIME))
-                    START_TIME = time.time()
-                COUNTER += 1
-
-                for detection in result.detections:
-                    for category in detection.categories:
-                        cat_name = category.category_name.lower().strip()
-                        sort_item(cat_name)
-
-                detection_result_list.append(result)
-
-            options = vision.ObjectDetectorOptions(
-                base_options=base_options,
-                running_mode=vision.RunningMode.LIVE_STREAM,
-                max_results=max_results,
-                score_threshold=score_threshold,
-                result_callback=save_result,
-            )
-            detector = vision.ObjectDetector.create_from_options(options)
-            print(f"[INFO] AI Model loaded: {model}")
+            interpreter = Interpreter(model_path=model_path)
+            interpreter.allocate_tensors()
+            input_details = interpreter.get_input_details()
+            output_details = interpreter.get_output_details()
+            print(f"[INFO] TensorFlow Lite model loaded: {model_path}")
+            print(f"       Input shape: {input_details[0]['shape']}")
         except Exception as e:
-            print(f"[WARNING] Could not load model '{model}' ({e}). Running without live inference.")
+            print(f"[WARNING] Could not load TFLite model: {e}")
+    else:
+        print(f"[INFO] Running in test mode (Model '{model_path}' not found).")
+
+    # Initialize Pi Camera (Picamera2)
+    picam2 = None
+    try:
+        from picamera2 import Picamera2
+        picam2 = Picamera2()
+        picam2.preview_configuration.main.size = (640, 480)
+        picam2.preview_configuration.main.format = "RGB888"
+        picam2.preview_configuration.align()
+        picam2.configure("preview")
+        picam2.start()
+        print("[INFO] PiCamera2 initialized successfully.")
+    except Exception as e:
+        print(f"[INFO] PiCamera2 not available ({e}). Running simulation camera.")
 
     print("\n" + "="*50)
-    print(" AI RECYCLE BIN IS ACTIVE AND SCANNING ")
-    print(" Press ESC or 'q' in video window to exit.")
+    print(" AI RECYCLE BIN RUNNING (TensorFlow + Picamera2) ")
+    print(" Press Ctrl+C in terminal or Stop in Thonny to exit.")
     print("="*50 + "\n")
+
+    input_shape = input_details[0]['shape'] if input_details else [1, 224, 224, 3]
+    req_h, req_w = input_shape[1], input_shape[2]
+
+    frame_count = 0
 
     try:
         while True:
-            # Capture frame
+            frame_count += 1
+
+            # 1. Capture Frame from Pi Camera
             if picam2 is not None:
-                im = picam2.capture_array()
-                image = cv2.resize(im, (width, height))
-                image = cv2.flip(image, -1)  # Correct orientation
-            elif cap is not None:
-                success, image = cap.read()
-                if not success:
-                    if video_file:
-                        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                        continue
-                    else:
-                        print("[ERROR] Camera frame capture failed.")
-                        break
-                image = cv2.resize(image, (width, height))
+                # Capture frame as numpy array
+                frame_arr = picam2.capture_array()
+                img = Image.fromarray(frame_arr)
             else:
-                # Fallback synthetic frame
-                image = np.zeros((height, width, 3), dtype=np.uint8)
-                time.sleep(0.03)
+                # Simulated frame for testing
+                img = Image.new("RGB", (640, 480), color=(30, 30, 30))
+                time.sleep(0.5)
 
-            # Convert BGR to RGB for inference
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # 2. Preprocess Frame for TensorFlow Model
+            img_resized = img.resize((req_w, req_h))
+            input_data = np.array(img_resized, dtype=np.float32) / 255.0
+            input_data = np.expand_dims(input_data, axis=0)
 
-            # Run MediaPipe Detection
-            if detector is not None:
-                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
-                detector.detect_async(mp_image, int(time.time() * 1000))
+            # 3. Run TensorFlow Lite Inference
+            if interpreter is not None:
+                # Handle quantized int8 vs float32 models
+                if input_details[0]['dtype'] == np.uint8:
+                    input_data = (input_data * 255).astype(np.uint8)
 
-            # Render HUD overlays (FPS and Bounding boxes)
-            current_frame = image
-            if detection_result_list:
-                current_frame = visualize(current_frame, detection_result_list[0])
-                detection_result_list.clear()
+                interpreter.set_tensor(input_details[0]['index'], input_data)
+                interpreter.invoke()
+                output_data = interpreter.get_tensor(output_details[0]['index'])[0]
 
-            # Display FPS on screen
-            fps_text = f"FPS: {FPS:.1f}"
-            cv2.putText(current_frame, fps_text, (20, 40),
-                        cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+                predicted_idx = int(np.argmax(output_data))
+                confidence = float(output_data[predicted_idx])
+                predicted_label = labels[predicted_idx] if predicted_idx < len(labels) else "unknown"
 
-            # Show window
-            cv2.imshow("AI Recycle Bin - Video Feed", current_frame)
+                if confidence >= threshold:
+                    print(f"[AI DETECTION] Detected: {predicted_label.upper()} (Confidence: {confidence * 100:.1f}%)")
+                    sort_item(predicted_label)
+                else:
+                    print(f"[SCANNING] No confident item detected (Top: {predicted_label} {confidence*100:.1f}%)", end="\r")
 
-            key = cv2.waitKey(1) & 0xFF
-            if key == 27 or key == ord("q"):
-                break
-            # Manual keyboard test triggers for testing without camera objects
-            elif key == ord("m"):
-                sort_item("metal")
-            elif key == ord("p"):
-                sort_item("paper")
-            elif key == ord("l"):
-                sort_item("plastic")
+            else:
+                # Simulation demo when running without physical model
+                if frame_count % 10 == 0:
+                    sim_cat = labels[(frame_count // 10) % len(labels)]
+                    print(f"\n[SIMULATION TEST] Simulating detection of: {sim_cat.upper()}")
+                    sort_item(sim_cat)
 
+            time.sleep(0.1)
+
+    except KeyboardInterrupt:
+        print("\n[INFO] Stopped by user.")
     finally:
-        print("\n[INFO] Releasing resources and shutting down...")
-        if detector is not None:
-            detector.close()
-        if cap is not None:
-            cap.release()
+        print("[INFO] Releasing hardware resources...")
         if picam2 is not None:
             picam2.stop()
         if GPIO_AVAILABLE:
             GPIO.cleanup()
-        cv2.destroyAllWindows()
-        print("[INFO] System terminated cleanly.")
+        print("[INFO] Shutdown complete.")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="AI-Powered Smart Video Classifying Recycle Bin",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument("--model", type=str, default="best.tflite",
-                        help="Path to TFLite object detection model")
-    parser.add_argument("--maxResults", type=int, default=5,
-                        help="Maximum detection results")
-    parser.add_argument("--scoreThreshold", type=float, default=0.35,
-                        help="Confidence score threshold")
-    parser.add_argument("--cameraId", type=int, default=0,
-                        help="Camera ID for OpenCV")
-    parser.add_argument("--frameWidth", type=int, default=640,
-                        help="Frame capture width")
-    parser.add_argument("--frameHeight", type=int, default=480,
-                        help="Frame capture height")
-    parser.add_argument("--video", type=str, default=None,
-                        help="Optional video file path for testing")
+    parser = argparse.ArgumentParser(description="AI Smart Recycle Bin (TensorFlow on Raspberry Pi)")
+    parser.add_argument("--model", type=str, default="best.tflite", help="Path to TFLite model file")
+    parser.add_argument("--labels", type=str, default="labels.txt", help="Path to labels.txt file")
+    parser.add_argument("--threshold", type=float, default=0.50, help="Confidence threshold")
 
     args = parser.parse_args()
-
-    run(
-        model=args.model,
-        max_results=args.maxResults,
-        score_threshold=args.scoreThreshold,
-        camera_id=args.cameraId,
-        width=args.frameWidth,
-        height=args.frameHeight,
-        video_file=args.video,
-    )
+    run(model_path=args.model, labels_path=args.labels, threshold=args.threshold)
 
 
 if __name__ == "__main__":

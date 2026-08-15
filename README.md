@@ -7,7 +7,7 @@
 [![IDE: Thonny](https://img.shields.io/badge/IDE-Thonny-brightgreen?style=for-the-badge)](https://thonny.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Model B**. It captures real-time video of discarded waste items via a **5MP Pi Camera**, detects and classifies the material type (**Metal, Paper, Plastic**) using a **TensorFlow / TensorFlow Lite** model trained and tested on **Google Colab**, and mechanically sorts the waste into segregated bins using dual high-torque **MG996R servo motors**.
+An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Model B**. It captures video from a **5MP Pi Camera (Picamera2)**, classifies waste items (**Metal, Paper, Plastic**) using a **TensorFlow / TensorFlow Lite** model trained and tested on **Google Colab**, and mechanically sorts the waste into segregated bins using dual high-torque **MG996R servo motors**.
 
 ---
 
@@ -42,7 +42,7 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 
 ```mermaid
 flowchart TD
-    A[Waste Item Placed on Top Flap] --> B[5MP Pi Camera Captures Video Feed]
+    A[Waste Item Placed on Top Flap] --> B[5MP Pi Camera Captures Frame via Picamera2]
     B --> C[TensorFlow Lite Model Runs Inference on Raspberry Pi]
     C -->|Classify Category| D{Waste Class?}
     
@@ -60,8 +60,8 @@ flowchart TD
     I --> J[System Ready for Next Item]
 ```
 
-1. **Vision Sensing**: When an item is placed on the chute, the **Pi Camera** captures video frames.
-2. **AI Classification**: The **TensorFlow Lite** model running locally on the Raspberry Pi identifies the object (`metal`, `paper`, or `plastic`).
+1. **Vision Sensing**: When an item is placed on the chute, the **Pi Camera** captures frames using `Picamera2`.
+2. **TensorFlow Classification**: The **TensorFlow Lite** model running locally on the Raspberry Pi identifies the object (`metal`, `paper`, or `plastic`).
 3. **Carousel Positioning (Servo 1 - GPIO 18)**:
    - `Metal` $\rightarrow$ **0°**
    - `Paper` $\rightarrow$ **70°**
@@ -129,12 +129,6 @@ pip install -r requirements.txt
 ### 4. Or Run via Terminal
 ```bash
 python main.py --model best.tflite
-```
-
-### 5. Testing on PC / Laptop (Simulation Mode)
-You can also test the script on your laptop using a test video or webcam:
-```bash
-python main.py --video assets/demo.mp4
 ```
 
 ---

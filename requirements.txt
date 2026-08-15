@@ -1,9 +1,12 @@
-# Core Computer Vision & AI packages
-opencv-python>=4.8.0
+# Machine Learning & Image Processing (Pure TensorFlow)
 numpy>=1.23.0
-mediapipe>=0.10.0
 Pillow>=9.0.0
 
-# Raspberry Pi GPIO (Installed on Raspberry Pi OS / Linux)
+# TensorFlow Lite Runtime for Raspberry Pi (or install full tensorflow)
+# On Raspberry Pi: pip install tflite-runtime
+tflite-runtime>=2.14.0; platform_machine == "armv7l" or platform_machine == "aarch64"
+tensorflow>=2.12.0; platform_machine != "armv7l" and platform_machine != "aarch64"
+
+# Raspberry Pi Hardware Drivers (Installed on Raspberry Pi OS / Linux)
 # RPi.GPIO>=0.7.1; platform_system == "Linux"
 # picamera2; platform_system == "Linux"
