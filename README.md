@@ -31,7 +31,7 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 | ![Acrylic and Chute](assets/acrylic_and_foam_chute.jpg) | ![Electronics Assembly](assets/electronics_assembly.jpg) |
 | **PVC Foam Chute & Acrylic Top Lid** | **Raspberry Pi 4 + Dual MG996R Servos** |
 
-| Plastic Sorting Action | 3D CAD Structure Design |
+| Plastic Sorting Action |
 | :---: | :---: |
 | ![Sorting Plastic](assets/sorting_plastic.png) | 
 | **Carousel Rotated to Plastic Compartment** | 
