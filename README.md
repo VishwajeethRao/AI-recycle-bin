@@ -133,6 +133,16 @@ python main.py --model best.tflite
 
 ---
 
+## 📚 Inspiration & References
+
+* **Vision & TFLite Reference**: [Freedom Tech - Raspberry Pi TFLite Object Detection Video Tutorial](https://www.youtube.com/watch?v=3YqbO2AlepM) — used as the starting vision pipeline reference.
+* **Custom Engineering & Extensions**:
+  * Dual-servo mechanical actuation (Carousel rotation + Drop flap trapdoor).
+  * Custom Google Colab TensorFlow dataset generation, model training, and quantization pipeline.
+  * Structural design and hardware assembly (PVC frame, acrylic cover, and inverted prism foam chute).
+
+---
+
 ## 📄 Project Documentation
 
 The full 55-page formal project report detailing literature survey, hardware design, code explanations, testing, and challenges is available at:

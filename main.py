@@ -13,6 +13,10 @@ Hardware Setup:
 Machine Learning:
 - TensorFlow / TensorFlow Lite model (best.tflite) trained in Google Colab
 
+References & Attribution:
+- Vision pipeline baseline adapted from Freedom Tech (https://www.youtube.com/watch?v=3YqbO2AlepM)
+- Dual-servo actuation logic, state machine, and hardware integration developed specifically for this project.
+
 Run in Thonny IDE or via Terminal:
     python main.py
 """
