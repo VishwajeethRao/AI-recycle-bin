@@ -26,10 +26,10 @@ An intelligent, automated waste sorting system built on **Raspberry Pi 4 / 5 Mod
 | ![Prototype Overview](assets/prototype_overview.png) | ![PVC Pipe Frame](assets/pvc_pipe_frame.jpg) |
 | **Real Hardware Prototype in Action** | **Rigid PVC Pipe Framework** |
 
-| Inverted Prism Guide Chute | Electronics & Servo Bench |
+| Inverted Prism Guide Chute | Electronics |
 | :---: | :---: |
 | ![Acrylic and Chute](assets/acrylic_and_foam_chute.jpg) | ![Electronics Assembly](assets/electronics_assembly.jpg) |
-| **PVC Foam Chute & Acrylic Top Lid** | **Raspberry Pi 4 + Dual MG996R Servos** |
+| **PVC Foam Chute & Acrylic Top Lid** | **Raspberry Pi 4 ** |
 
 | Plastic Sorting Action |
 | :---: | :---: |
