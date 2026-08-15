@@ -148,6 +148,3 @@ The full 55-page formal project report detailing literature survey, hardware des
 
 ---
 
-## 📜 License
-
-This project is licensed under the [MIT License](LICENSE).
